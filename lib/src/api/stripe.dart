@@ -137,8 +137,8 @@ class Stripe {
     if (kIsWeb) {
       //TODO: open in iframe
       html.Window _window = html.window;
-      _window.open("http://google.es/#/", "_self");
-      return completer.completeError("opentap");
+      _window.open(action.redirectToUrl.url, "_self");
+      return completer.completeError("openweb");
     } else {
       final returnUrl = Uri.parse(action.redirectToUrl.returnUrl);
 
