@@ -11,6 +11,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'api_handler.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
+
 typedef Future<dynamic> IntentProvider(Uri uri);
 
 class Stripe {
@@ -23,7 +26,7 @@ class Stripe {
   final String apiVersion;
   final SupportLocale locale;
 
-  String _returnUrlForSca;
+  Uri _returnUrlForSca;
 
   PaymentIntents paymentIntents;
   PaymentMethods paymentMethods;
@@ -49,7 +52,8 @@ class Stripe {
       : _apiHandler =
             StripeApiHandler(stripeAccount: stripeAccount, locale: locale) {
     _validateKey(publishableKey, stripeAccount);
-    _returnUrlForSca = returnUrlForSca ?? "stripesdk://3ds.stripesdk.io";
+    _returnUrlForSca =
+        returnUrlForSca ?? Uri(scheme: "stripesdk", host: "3ds.stripesdk.io");
     _apiHandler.apiVersion = apiVersion;
     paymentIntents = PaymentIntents(this);
     paymentMethods = PaymentMethods(this);
@@ -116,28 +120,44 @@ class Stripe {
   /// This should be set on the intent before attempting to authenticate it.
   String getReturnUrlForSca() {
     final requestId = Random.secure().nextInt(99999999);
-    return "$_returnUrlForSca?requestId=$requestId";
+
+    var params = Map<String, String>();
+    params.addAll(_returnUrlForSca.queryParameters);
+    params["requestId"] = requestId.toString();
+
+    _returnUrlForSca = _returnUrlForSca.replace(queryParameters: params);
+
+    return _returnUrlForSca.toString();
   }
 
   Future<dynamic> authenticateIntent(
       IntentAction action, IntentProvider callback) async {
-    final url = action.redirectToUrl.url;
-    final returnUrl = Uri.parse(action.redirectToUrl.returnUrl);
-    final completer = Completer<dynamic>();
-    StreamSubscription sub;
-    sub = getUriLinksStream().listen((Uri uri) async {
-      if (uri.scheme == returnUrl.scheme &&
-          uri.host == returnUrl.host &&
-          uri.queryParameters['requestId'] ==
-              returnUrl.queryParameters['requestId']) {
-        await sub.cancel();
-        final intent = await callback(uri);
-        completer.complete(intent);
-      }
-    });
 
-    await launch(url, forceSafariVC: false);
-    return completer.future;
+    final completer = Completer<dynamic>();
+
+    if (kIsWeb) {
+      //TODO: open in iframe
+      html.Window _window = html.window;
+      _window.open("http://google.es/#/", "_self");
+      return completer.completeError("opentap");
+    } else {
+      final returnUrl = Uri.parse(action.redirectToUrl.returnUrl);
+
+      StreamSubscription sub;
+      sub = getUriLinksStream().listen((Uri uri) async {
+        if (uri.scheme == returnUrl.scheme &&
+            uri.host == returnUrl.host &&
+            uri.queryParameters['requestId'] ==
+                returnUrl.queryParameters['requestId']) {
+          await sub.cancel();
+          final intent = await callback(uri);
+          completer.complete(intent);
+        }
+      });
+
+      await launch(action.redirectToUrl.url, forceSafariVC: false);
+      return completer.future;
+    }
   }
 }
 
