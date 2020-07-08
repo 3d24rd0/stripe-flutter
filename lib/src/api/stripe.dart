@@ -48,12 +48,11 @@ class Stripe {
       {this.apiVersion = defaultApiVersion,
       this.locale = SupportLocale.auto,
       String stripeAccount,
-      String returnUrlForSca})
+      Uri returnUrlForSca})
       : _apiHandler =
             StripeApiHandler(stripeAccount: stripeAccount, locale: locale) {
     _validateKey(publishableKey, stripeAccount);
-    _returnUrlForSca =
-        returnUrlForSca ?? Uri(scheme: "stripesdk", host: "3ds.stripesdk.io");
+    _returnUrlForSca = returnUrlForSca ?? Uri(scheme: "stripesdk", host: "3ds.stripesdk.io");
     _apiHandler.apiVersion = apiVersion;
     paymentIntents = PaymentIntents(this);
     paymentMethods = PaymentMethods(this);
@@ -77,7 +76,7 @@ class Stripe {
   static void init(String publishableKey,
       {String apiVersion = defaultApiVersion,
       String stripeAccount,
-      String returnUrlForSca}) {
+      Uri returnUrlForSca}) {
     if (_instance == null) {
       _instance = Stripe(publishableKey,
           apiVersion: apiVersion,
